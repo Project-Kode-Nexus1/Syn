@@ -2,6 +2,8 @@
 
 // PVCpu Opcodes
 final class PVCpuOpcodes {
+	public const int OP_NOP = 0x0;
+
 	// ALU
 	public const int OP_ADD = 0x1;
     public const int OP_SUB = 0x2;
@@ -27,9 +29,38 @@ final class PVCpuOpcodes {
     // Memory
     public const int OP_LOAD = 0x100;
     public const int OP_STORE = 0x101;
+	public const int OP_PUSH = 0x102;
+	public const int OP_POP = 0x103;
+	public const int OP_PUSH16 = 0x104;
+	public const int OP_POP16 = 0x105;
+	public const int OP_PUSH32 = 0x106;
+	public const int OP_POP32 = 0x107;
+	public const int OP_PUSH64 = 0x108;
+	public const int OP_POP64 = 0x109;
+	public const int OP_MSET = 0x10A;
+	public const int OP_MCPY = 0x10B;
+	public const int OP_MCMP = 0x10C;	
 
-    // Registers
-	public const int OP_MOV = 0x150;
+    // Movement
+	public const int OP_MOV = 0x115;
+	public const int OP_MOVB = 0x116;
+	public const int OP_MOVW = 0x117;
+	public const int OP_MOVD = 0x118;
+	public const int OP_MOVQ = 0x119;
+	public const int OP_XCHG = 0x11A;
+	public const int OP_RREG = 0x11B;
+
+	// Jumping
+	public const int OP_JMP = 0x12C;
+	public const int OP_CALL = 0x12D;
+	public const int OP_RET = 0x12E;
+	public const int OP_EXCEPTION = 0x12F;
+	public const int OP_JZ = 0x130;
+	public const int OP_JNZ = 0x131;
+	public const int OP_JL = 0x132;
+	public const int OP_JLE = 0x133;
+	public const int OP_JG = 0x134;
+	public const int OP_JGE = 0x135;
 }
 
 // PVCpu Modes
@@ -233,16 +264,144 @@ class SynCpu {
 		echo "SynCPU Reset Complete!\n";
 	}
 
-	// Arithmetic and Logic Unit : Returns array<c, is_zero, is_carry, is_max>
+	// Arithmetic and Logic Unit : Returns array<c, is_zero, is_carry, is_equal>
 	private function alu(int $a, int $b, int $opcode) : array {
+		$c = 0;
+		$is_carry = false;
+		$is_equal = $a === $b;
+
 		switch ($opcode) {
 			case PVCpuOpcodes::OP_ADD: {
 				$c = $a + $b;
-				return [$c, $c == 0, $c == 0xFFFFFFFFFFFFFFFF];
+				if ($a >= 0 && $b >= 0 && $c < 0) {
+					$is_carry = true;
+				}
+
+				break;
+			}
+			case PVCpuOpcodes::OP_SUB: {
+				$c = $a - $b;
+				if ($a >= 0 && $b >= 0 && $a < $b) {
+					$is_carry = true;
+				}
+
+				break;
+			}
+			case PVCpuOpcodes::OP_MUL: {
+				$c = $a * $b;
+				break;
+			}
+			case PVCpuOpcodes::OP_DIV: {
+				if ($b === 0) return [0, true, false];
+
+				$c = intdiv($a, $b);
+				break;
 			}
 
-			default: return [0, true, false];
+			case PVCpuOpcodes::OP_AND: {
+				$c = $a & $b;
+				break;
+			}
+			case PVCpuOpcodes::OP_OR: {
+				$c = $a | $b;
+				break;
+			}
+			case PVCpuOpcodes::OP_NOR: {
+				$c = ~($a | $b);
+				break;
+			}
+			case PVCpuOpcodes::OP_XOR: {
+				$c = $a ^ $b;
+				break;
+			}
+			case PVCpuOpcodes::OP_XNOR: {
+				$c = ~($a ^ $b);
+				break;
+			}
+			case PVCpuOpcodes::OP_NOT: {
+				$c = ~$a;
+				break;
+			}
+			case PVCpuOpcodes::OP_NAND: {
+				$c = ~($a & $b);
+				break;
+			}
+
+			case PVCpuOpcodes::OP_CMP: {
+				break;
+			}
+			case PVCpuOpcodes::OP_UCMP: {
+				break;
+			}
+			case PVCpuOpcodes::OP_TEST: {
+				$c = $a & $b;
+				break;
+			}
+			case PVCpuOpcodes::OP_RSHIFT: {
+				$shift = $b & 0x3F;
+
+				if ($shift === 0) {
+					$c = $a;
+				} else {
+					if ($a < 0) {
+						$c = ($a >> $shift) & ((1 << (63 - $shift)) - 1);
+					} else {
+						$c = $a >> $shift;
+					}
+				}
+
+				break;
+			}
+			case PVCpuOpcodes::OP_LSHIFT: {
+				$shift = $b & 0x3F;
+
+				if ($shift === 0) {
+					$c = $a;
+				} else {
+					$c = $a << $shift;
+				}
+
+				break;
+			}
+			case PVCpuOpcodes::OP_ARSHIFT: {
+				$shift = $b & 0x3F;
+				$c = $a >> $shift;
+				break;
+			}
+			case PVCpuOpcodes::OP_ARLSHIFT: {
+				$shift = $b & 0x3F;
+				$c = $a << $shift;
+				break;
+			}
+			case PVCpuOpcodes::OP_ROTR: {
+				$shift = $b & 0x3F;
+
+				if ($shift === 0) {
+					$c = $a;
+				} else {
+					$left = 64 - $shift;
+					$c = ($a >> $shift) | ($a << $left);
+				}
+
+				break;
+			}
+			case PVCpuOpcodes::OP_ROTL: {
+				$shift = $b & 0x3F;
+
+				if ($shift === 0) {
+					$c = $a;
+				} else {
+					$right = 64 - $shift;
+					$c = ($a << $shift) | ($a >> $right);
+				}
+
+				break;
+			}
+
+			default: break;
 		}
+
+		return [$c, $c == 0, $is_carry, $is_equal];
 	}
 
 	// Gets value based on mode
@@ -287,11 +446,11 @@ class SynCpu {
 		if ($this->halted) return;
 
 		// Break instruction
-		$opcode = $inst & 0xFFF;
-		$mode = ($inst >> 12) & 0xF;
-		$rsrc = ($inst >> 16) & 0x3F;
-		$rdst = ($inst >> 22) & 0x3F;
-		$flags = ($inst >> 28) & 0xF;
+		$opcode = ($inst >> 20) & 0xFFF;
+		$mode = ($inst >> 16) & 0xF;
+		$rsrc = ($inst >> 10) & 0x3F;
+		$rdst = ($inst >> 4) & 0x3F;
+		$flags = $inst & 0xF;
 
 		if (!($flags & 0b0001)) { // Bit 0 <Valid Instruction Bit>
 			$this->raise_exception(0); // TODO: Add proper enum
@@ -307,19 +466,45 @@ class SynCpu {
 		}
 
 		$dest_v = $this->get_value_via_mode($mode, $flags, $extra, $rsrc, $rdst);
-		if ($src_v < 0) {
+		if ($dest_v < 0) {
 			$this->raise_exception(0); // TODO: Add proper enum
 			return;
 		}
 
 		// ALU Instructions
 		if ($opcode >= PVCpuOpcodes::OP_ADD && $opcode <= PVCpuOpcodes::OP_ROTL) {
-			$out_v = $this->alu($src_v, $dest_v, $opcode);
+			$out_v = $this->alu($src_v, $dest_v, $opcode)[0];
 			goto label_out;
 		}
 
 		// Other instructions
-		// TODO: Add
+		switch ($opcode) {
+			case PVCpuOpcodes::OP_NOP: return; // don't do anything
+
+			case PVCpuOpcodes::OP_MOVQ:
+			case PVCpuOpcodes::OP_MOV: $out_v = $src_v; break;
+			case PVCpuOpcodes::OP_MOVB: $out_v = $src_v & 0xFF; break;
+			case PVCpuOpcodes::OP_MOVW: $out_v = $src_v & 0xFFFF; break;
+			case PVCpuOpcodes::OP_MOVD: $out_v = $src_v & 0xFFFFFFFF; break;
+			case PVCpuOpcodes::OP_XCHG: {
+				$out_v = $dest_v;
+
+				// Exchange
+				if (!$this->save_value_via_mode($mode, $flags, $extra, $rdst, $rsrc, $out_v)) {
+					$this->raise_exception(0); // TODO: Add proper enum
+					return;
+				}
+
+				$out_v = $src_v;
+				break;
+			}
+			case PVCpuOpcodes::OP_RREG: $out_v = 0; break;
+			
+			default: {
+				$this->raise_exception(0); // TODO: Add proper enum
+				return;
+			}
+		}
 
 		label_out: {
 			if (!$this->save_value_via_mode($mode, $flags, $extra, $rsrc, $rdst, $out_v)) {
@@ -328,6 +513,22 @@ class SynCpu {
 			}
 		}
 	}
+}
+
+$cpu = new SynCpu();
+
+$filePath = __DIR__ . '/tests/bin/t1.bin';
+if (is_file($filePath)) {
+    $data = file_get_contents($filePath);
+
+    if ($data !== false) {
+        $length = strlen($data);
+
+        for ($offset = 0; $offset < $length; $offset += 4) {
+            $chunk = unpack('V', substr($data, $offset, 4))[1];
+            $cpu->execute($chunk, 0x0);
+        }
+    }
 }
 
 ?>
