@@ -2,6 +2,7 @@
 
 // PVCpu Opcodes
 final class PVCpuOpcodes {
+	// ALU
 	public const int OP_ADD = 0x1;
     public const int OP_SUB = 0x2;
     public const int OP_MUL = 0x3;
@@ -22,9 +23,11 @@ final class PVCpuOpcodes {
     public const int OP_ARLSHIFT = 0x12;
     public const int OP_ROTR = 0x13;
     public const int OP_ROTL = 0x14;
+
     // Memory
     public const int OP_LOAD = 0x100;
     public const int OP_STORE = 0x101;
+
     // Registers
 	public const int OP_MOV = 0x150;
 }
@@ -46,6 +49,18 @@ final class PVCpuModes {
     public const int SRC_REG = 0xB; // opcode (src)
     public const int SRC_REG_IMM = 0xC; // opcode (src (as imm))
     public const int SRC_IMM = 0xD; // opcode (imm)
+}
+
+// PVCpu Privilage Levels
+final class PVCpuPrivilageLevels {
+	public const int PL_FULL = 0;
+	public const int PL_HYPERVISOR = 1;
+	public const int PL_FIRMWARE = 2;
+	public const int PL_KERNEL = 3;
+	public const int PL_DRIVERS = 4;
+	public const int PL_TRUSTED = 5;
+	public const int PL_USER = 6;
+	public const int PL_SANDBOX = 7;
 }
 
 class PVCpuRegfile {
@@ -191,10 +206,11 @@ class PVCpuIState {
 class SynCpu {
 	private const VERSION = "1.0.0";
 
+	private int $privilage_level;
+
 	private PVCpuRegfile $regfile;
 	private PVCpuIState $istate;
 
-	private int $pc = 0;
 	private bool $halted = false;
 
 	public function __construct() {
@@ -205,12 +221,112 @@ class SynCpu {
 
 	// Resets the CPU
 	public function reset() : void {
-		$this->pc = 0; // Starts execution at addr 0
 		$this->halted = false;
+
+		// Reset PL
+		$this->privilage_level = PVCpuPrivilageLevels::PL_FULL;
 
 		// Reset Registers
 		$this->regfile->reset();
 		$this->istate->reset();
+
+		echo "SynCPU Reset Complete!\n";
+	}
+
+	// Arithmetic and Logic Unit : Returns array<c, is_zero, is_carry, is_max>
+	private function alu(int $a, int $b, int $opcode) : array {
+		switch ($opcode) {
+			case PVCpuOpcodes::OP_ADD: {
+				$c = $a + $b;
+				return [$c, $c == 0, $c == 0xFFFFFFFFFFFFFFFF];
+			}
+
+			default: return [0, true, false];
+		}
+	}
+
+	// Gets value based on mode
+	private function get_value_via_mode(int $mode, int $flags, int $extra, int $rsrc, int $rdest) : int {
+		switch ($mode) {
+			case PVCpuModes::REG_REG: return $this->regfile->get_register_value($rsrc);
+			case PVCpuModes::REG_IMM: return $rsrc;
+			
+			case PVCpuModes::REG_EXTIMM: {
+				if (!($flags & 0b0010)) return -1; // Bit 1 <Extension Present Bit>
+
+				return $flags & 0b0100 ? ($extra & 0xFFFFFFFFFFFFFFFF) : ($extra & 0xFFFFFFFF); // Bit 2 <Extension is 64-bits Bit>
+			}
+
+			default: return -1;
+		}
+	}
+
+	// Saves value based on mode
+	private function save_value_via_mode(int $mode, int $flags, int $extra, int $rsrc, int $rdest, int $value) : bool {
+		switch ($mode) {
+			case PVCpuModes::REG_REG:
+			case PVCpuModes::REG_IMM:
+			case PVCpuModes::REG_EXTIMM: {
+				return $this->regfile->set_register_value($rdest, $value);
+			}
+
+			default: return false;
+		}
+	}
+
+	// Raises an exception
+	private function raise_exception(int $type) : void {
+		// Since i did not yet implement the CPU Info structure, ill just directly halt
+		$this->halted = true;
+
+		echo "SynCPU Halted!\n";
+	}
+
+	// Executes machine code
+	public function execute(int $inst, int $extra) : void {
+		if ($this->halted) return;
+
+		// Break instruction
+		$opcode = $inst & 0xFFF;
+		$mode = ($inst >> 12) & 0xF;
+		$rsrc = ($inst >> 16) & 0x3F;
+		$rdst = ($inst >> 22) & 0x3F;
+		$flags = ($inst >> 28) & 0xF;
+
+		if (!($flags & 0b0001)) { // Bit 0 <Valid Instruction Bit>
+			$this->raise_exception(0); // TODO: Add proper enum
+			return;
+		}
+
+		$out_v = 0;
+
+		$src_v = $this->get_value_via_mode($mode, $flags, $extra, $rsrc, $rdst);
+		if ($src_v < 0) {
+			$this->raise_exception(0); // TODO: Add proper enum
+			return;
+		}
+
+		$dest_v = $this->get_value_via_mode($mode, $flags, $extra, $rsrc, $rdst);
+		if ($src_v < 0) {
+			$this->raise_exception(0); // TODO: Add proper enum
+			return;
+		}
+
+		// ALU Instructions
+		if ($opcode >= PVCpuOpcodes::OP_ADD && $opcode <= PVCpuOpcodes::OP_ROTL) {
+			$out_v = $this->alu($src_v, $dest_v, $opcode);
+			goto label_out;
+		}
+
+		// Other instructions
+		// TODO: Add
+
+		label_out: {
+			if (!$this->save_value_via_mode($mode, $flags, $extra, $rsrc, $rdst, $out_v)) {
+				$this->raise_exception(0); // TODO: Add proper enum
+				return;
+			}
+		}
 	}
 }
 
