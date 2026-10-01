@@ -2,6 +2,7 @@
 
 import HomeScreen from "@/components/HomeScreen";
 import LockScreen from "@/components/LockScreen";
+import Quicksettings from "@/components/Quicksettings";
 import usePhoneStore from "@/store/usePhone";
 import { AnimatePresence, motion } from "motion/react";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -17,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export default function Home() {
-  const { locked, toggleLock } = usePhoneStore();
+  const { locked, toggleLock, qs } = usePhoneStore();
 
   return (
     <div className={`${geistSans.className} ${geistMono.className} font-sans w-full flex items-center justify-center min-h-screen overflow-hidden`} style={{ userSelect: "none" }}>
@@ -41,8 +42,11 @@ export default function Home() {
                   </motion.div>
                 }
                 <HomeScreen />
-
               </AnimatePresence>
+
+              {qs &&
+                <Quicksettings />
+              }
             </div>
           </div>
         </div>

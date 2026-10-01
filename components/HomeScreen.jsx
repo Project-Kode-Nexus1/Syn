@@ -4,9 +4,10 @@ import { PiTriangleFill } from "react-icons/pi";
 import { FaBars, FaRegCircleDot } from "react-icons/fa6";
 import usePhoneStore from '@/store/usePhone';
 import Image from 'next/image';
+import Quicksettings from './Quicksettings';
 
 const HomeScreen = () => {
-    const { currentApp, openApp, backFromApp, toggleLock, currentTime, setCurrentTime, allApps } = usePhoneStore();
+    const { qs, setQs, toggleQs, currentApp, openApp, backFromApp, toggleLock, currentTime, setCurrentTime, allApps } = usePhoneStore();
     const [speed, setSpeed] = useState("");
     const [anim, setAnim] = useState(0); // State to force re-render
     const [key, setKey] = useState(0);
@@ -121,6 +122,7 @@ const HomeScreen = () => {
                         className='cursor-pointer rounded-full h-full w-full absolute left-0 top-0 grid place-items-center z-10'
                         onClick={() => {
                             setAnim(1);
+                            toggleQs();
                             setKey(k => k + 1);
                             setTimeout(() => setAnim(0), 500);
                         }}
@@ -146,6 +148,7 @@ const HomeScreen = () => {
                         className='cursor-pointer rounded-full h-full w-full absolute left-0 top-0 grid place-items-center z-10'
                         onClick={() => {
                             setAnim(2);
+                            setQs(false);
                             setKey(k => k + 1);
                             setTimeout(() => setAnim(0), 500);
                         }}
@@ -180,6 +183,22 @@ const HomeScreen = () => {
                     </span>
                 </span>
             </div>
+
+            {/* <AnimatePresence>
+                {qs
+                    && <motion.div
+                        key="quick-settings"
+                        initial={{ opacity: 0, top: '0%' }}
+                        animate={{ opacity: 1, top: '0%' }}
+                        exit={{ opacity: 1, top: '-100%' }}
+                        transition={{ duration: 0.3 }}
+                        className="h-full w-full absolute z-10"
+                    >
+                        <Quicksettings unlock={toggleLock} />
+                    </motion.div>
+                }
+                <HomeScreen />
+            </AnimatePresence> */}
         </div>
     );
 };

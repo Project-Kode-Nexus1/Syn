@@ -3,6 +3,10 @@ import Phone from '@/components/Phone';
 
 const usePhoneStore = create((set) => ({
     locked: true,
+    qs: false,
+    bios: false,
+    toggleQs: () => set((state) => ({ qs: !state.qs })),
+    setQs: (v) => set((state) => ({ qs: v })),
     toggleLock: () => set((state) => ({ locked: !state.locked })),
     currentTime: new Date(),
     setCurrentTime: () => set({ currentTime: new Date() }),
