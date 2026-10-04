@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 // PVCpu Opcodes
 final class PVCpuOpcodes {
 	public const int OP_NOP = 0x0;
