@@ -8,25 +8,26 @@ final class PVCpuOpcodes {
 
 	// ALU
 	public const int OP_ADD = 0x1;
-    public const int OP_SUB = 0x2;
-    public const int OP_MUL = 0x3;
-    public const int OP_DIV = 0x4;
-    public const int OP_AND = 0x5;
-    public const int OP_OR = 0x6;
-    public const int OP_NOR = 0x7;
-    public const int OP_XOR = 0x8;
-    public const int OP_XNOR = 0x9;
-    public const int OP_NOT = 0xA;
-    public const int OP_NAND = 0xB;
-    public const int OP_CMP = 0xC;
-    public const int OP_UCMP = 0xD;
-    public const int OP_TEST = 0xE;
-    public const int OP_RSHIFT = 0xF;
-    public const int OP_LSHIFT = 0x10;
-    public const int OP_ARSHIFT = 0x11;
-    public const int OP_ARLSHIFT = 0x12;
-    public const int OP_ROTR = 0x13;
-    public const int OP_ROTL = 0x14;
+	public const int OP_SUB = 0x2;
+	public const int OP_MUL = 0x3;
+	public const int OP_DIV = 0x4;
+	public const int OP_CMP = 0x5;
+	public const int OP_UCMP = 0x6;
+	public const int OP_AND = 0x7;
+	public const int OP_OR = 0x8;
+	public const int OP_NOT = 0x9;
+	public const int OP_NAND = 0xA;
+	public const int OP_NOR = 0xB;
+	public const int OP_XOR = 0xC;
+	public const int OP_SHL = 0xE;
+	public const int OP_SHR = 0xF;
+	public const int OP_ROTL = 0x10;
+	public const int OP_ROTR = 0x11;
+	public const int OP_AROTL = 0x12;
+	public const int OP_AROTR = 0x13;
+	public const int OP_INC = 0x14;
+	public const int OP_DEC = 0x15;
+	public const int OP_TEST = 0x16;
 
     // Memory
     public const int OP_LOAD = 0x100;
